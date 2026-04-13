@@ -1,70 +1,65 @@
-<!-- generated: 2026-04-13T04:00:02.794Z | model: claude-opus-4-6 | sha: 597ad1fb -->
+<!-- generated: 2026-04-13T04:06:59.271Z | model: claude-opus-4-6 | sha: 597ad1fb -->
 
 # API Reference — spring-petclinic-config-server
 
 ## TL;DR for Agents
 
-- **Zero custom API endpoints detected** — this service is a Spring Cloud Config Server, not a business API. It serves configuration to other microservices.
-- **No custom authentication mechanism** is explicitly configured in the extracted contracts.
-- The config server exposes **Spring Cloud Config native endpoints** (e.g., `/{application}/{profile}`, `/{application}/{profile}/{label}`) for serving externalized configuration.
-- This service is an **infrastructure component** of the `spring-petclinic-microservices` system — if you're looking for pet/owner/vet business APIs, see the individual microservices.
-- **No events, GraphQL types, or gRPC services** are defined for this service.
-
----
+- **Zero application-level API endpoints** are exposed by this service — it is a **Spring Cloud Config Server**, not a business API.
+- The config server serves externalized configuration to other microservices in the `spring-petclinic-microservices` ecosystem via Spring Cloud Config protocol.
+- **No custom authentication mechanism** is defined in the extracted contracts.
+- The only HTTP interfaces are the **Spring Cloud Config native endpoints** (e.g., `/{application}/{profile}`, `/{application}-{profile}.yml`) used internally by other services to fetch their configuration at startup.
+- If you are looking for Pet Clinic business APIs (owners, vets, visits), see the individual service docs or the API gateway.
 
 ## Authentication
 
-No authentication mechanism was detected in the extracted API contracts for this service.
+No authentication mechanism was identified in the extracted API contracts for this service.
 
-In the default `spring-petclinic-microservices` setup, the config server typically runs on an internal network and is accessed by other microservices without token-based auth. In production deployments, you would typically secure it via:
+By default, Spring Cloud Config Server endpoints are unauthenticated. In production deployments, access is typically restricted via:
 
-| Method | Description |
+| Method | Details |
 |---|---|
-| HTTP Basic Auth | Configured via `spring.security.user.name` / `spring.security.user.password` on the config server, and `spring.cloud.config.username` / `spring.cloud.config.password` on clients |
-| Network-level security | Restrict access to the config server port at the infrastructure layer |
-
----
+| Network-level isolation | Config server is only reachable from internal service network |
+| Spring Security (if added) | Basic auth with `spring.security.user.name` / `spring.security.user.password` |
+| Token-based | Not configured by default in this repository |
 
 ## Base URL
 
-No explicit base URL was found in the extracted contracts. The config server's default and typical configurations are:
+The base URL is not explicitly defined in the extracted contracts. Standard defaults for Spring Cloud Config Server:
 
 | Environment | Base URL | Notes |
 |---|---|---|
-| Local / Default | `http://localhost:8888` | Default Spring Cloud Config Server port |
+| Local development | `http://localhost:8888` | Default Spring Cloud Config Server port |
 | Docker Compose | `http://config-server:8888` | Service name as hostname within Docker network |
 | Kubernetes | `http://config-server.default.svc.cluster.local:8888` | Adjust namespace as needed |
 
----
+Other microservices reference this via their `spring.cloud.config.uri` property.
 
-## Endpoints
+## Spring Cloud Config Native Endpoints
 
-No custom endpoints were extracted from the service contracts. However, as a **Spring Cloud Config Server**, this service automatically exposes the following native configuration endpoints:
+Since this service has **no custom API endpoints**, the only HTTP interfaces are the built-in Spring Cloud Config Server endpoints. These are not business APIs — they serve configuration files to client microservices.
 
-### GET `/{application}/{profile}`
+### GET `/{application}/{profile}[/{label}]`
 
-**Purpose:** Retrieve configuration properties for a given application and active profile.
+**Purpose:** Retrieve configuration properties for a given application, profile, and optional Git label (branch/tag).
 
-| Parameter | Type | Description |
-|---|---|---|
-| `application` | path | The `spring.application.name` of the client service (e.g., `customers-service`) |
-| `profile` | path | The active Spring profile (e.g., `default`, `docker`) |
+**Auth:** None by default (see [Authentication](#authentication)).
 
-**Example:**
+**Example Request:**
+
 ```
-GET http://localhost:8888/customers-service/default
+GET /customers-service/default/main
 ```
 
-**Response (success):**
+**Response (Success):**
+
 ```json
 {
   "name": "customers-service",
   "profiles": ["default"],
-  "label": null,
-  "version": null,
+  "label": "main",
   "propertySources": [
     {
-      "name": "classpath:/config/customers-service.yml",
+      "name": "https://github.com/spring-petclinic/spring-petclinic-microservices-config/customers-service.yml",
       "source": {
         "server.port": 8081,
         "spring.datasource.url": "jdbc:mysql://localhost:3306/petclinic"
@@ -74,42 +69,46 @@ GET http://localhost:8888/customers-service/default
 }
 ```
 
-| Status Code | Description |
+| Status Code | Meaning |
 |---|---|
-| `200 OK` | Configuration returned successfully |
-| `404 Not Found` | No configuration found for the given application/profile |
-
-### GET `/{application}/{profile}/{label}`
-
-**Purpose:** Retrieve configuration for a specific application, profile, and Git branch/label.
-
-| Parameter | Type | Description |
-|---|---|---|
-| `application` | path | Client application name |
-| `profile` | path | Active Spring profile |
-| `label` | path | Git branch, tag, or commit hash (e.g., `main`, `v1.0`) |
+| `200` | Configuration returned successfully |
+| `404` | Application or profile not found (returns empty property sources) |
+| `500` | Backend config repository (Git) unreachable |
 
 ### GET `/{application}-{profile}.yml`
 
 **Purpose:** Retrieve configuration as a raw YAML file.
 
+```
+GET /customers-service-default.yml
+```
+
 ### GET `/{application}-{profile}.properties`
 
 **Purpose:** Retrieve configuration as a raw `.properties` file.
 
----
+```
+GET /customers-service-default.properties
+```
+
+### POST `/actuator/bus-refresh` *(if Spring Cloud Bus is enabled)*
+
+**Purpose:** Trigger a configuration refresh event across all connected services.
+
+| Status Code | Meaning |
+|---|---|
+| `204` | Refresh event published successfully |
+| `405` | Bus refresh not enabled |
 
 ## Events
 
-No events (publish or subscribe) were detected for this service. The config server is a synchronous, pull-based configuration provider. Client microservices poll or fetch configuration at startup.
+No custom events (Kafka, RabbitMQ topics, etc.) are published or subscribed to by the config server based on the extracted contracts.
 
-> **Note:** In setups using **Spring Cloud Bus**, the config server can publish refresh events (typically over RabbitMQ or Kafka) via `POST /actuator/busrefresh`. This was not detected in the current contract extraction.
-
----
+> **Note:** If Spring Cloud Bus is enabled in the deployment, the config server may publish refresh events on a message broker topic (e.g., `springCloudBus`), but this is not part of the default extracted configuration.
 
 ## See Also
 
 - [Spring Cloud Config Server Documentation](https://docs.spring.io/spring-cloud-config/docs/current/reference/html/#_spring_cloud_config_server)
-- [spring-petclinic-microservices GitHub Repository](https://github.com/spring-petclinic/spring-petclinic-microservices)
-- [Spring Cloud Bus Reference](https://docs.spring.io/spring-cloud-bus/docs/current/reference/html/) — for distributed configuration refresh events
-- [SCENARIOS.md](SCENARIOS.md) — common integration and debugging scenarios for this service
+- [spring-petclinic-microservices repository](https://github.com/spring-petclinic/spring-petclinic-microservices)
+- [spring-petclinic-microservices-config repository](https://github.com/spring-petclinic/spring-petclinic-microservices-config) — the Git backend holding the actual configuration files served by this config server
+- [SCENARIOS.md](SCENARIOS.md) — common integration and debugging scenarios

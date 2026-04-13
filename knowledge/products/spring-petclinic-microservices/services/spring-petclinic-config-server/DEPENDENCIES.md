@@ -1,4 +1,4 @@
-<!-- generated: 2026-04-13T04:00:41.570Z | model: claude-opus-4-6 | sha: 597ad1fb -->
+<!-- generated: 2026-04-13T04:07:35.105Z | model: claude-opus-4-6 | sha: 597ad1fb -->
 
 # Dependencies — spring-petclinic-config-server
 
@@ -20,9 +20,8 @@
 
 ### Notes
 
-- The config server pulls configuration files (e.g., `application.yml`, per-service profiles) from the external Git repository at startup and on refresh.
-- Because the backing store is an **external public GitHub repository**, availability depends on GitHub's uptime and network egress policies. If GitHub is unreachable at boot time, the config server will fail to start and **no downstream service will receive configuration**.
-- No explicit timeout or retry policy was detected in the extracted dependency data. Spring Cloud Config's default Git clone/fetch behavior applies (typically governed by JGit defaults and `spring.cloud.config.server.git.*` properties).
+- The config server clones or pulls from the external Git repository at startup and on refresh. If GitHub is unreachable or the repository is deleted/renamed, **no microservice will be able to bootstrap its configuration**.
+- No explicit timeout or retry policy was detected in the extracted dependency data. Spring Cloud Config Server defaults apply (underlying JGit / HTTP transport timeouts).
 
 ---
 
@@ -32,7 +31,7 @@
 |---|---|---|---|
 | *(none)* | — | — | — |
 
-This service does not use any database or persistent storage. Configuration state is sourced entirely from the upstream Git repository.
+This service does not connect to any database or persistent storage layer. Configuration state is sourced entirely from the upstream Git repository.
 
 ---
 
@@ -40,7 +39,11 @@ This service does not use any database or persistent storage. Configuration stat
 
 | Name | Category | SDK / Package | Purpose |
 |---|---|---|---|
-| Jolokia | Monitoring | `jolokia-core` | JVM monitoring and management over HTTP (exposes MBeans as REST endpoints) |
+| Jolokia | Monitoring | `jolokia-core` | JVM monitoring and management over HTTP |
+
+### Notes
+
+- Jolokia exposes JMX MBeans as HTTP/JSON endpoints. Ensure the `/jolokia` actuator endpoint is secured in production to prevent unauthorized access to JVM internals.
 
 ---
 
@@ -50,22 +53,24 @@ This service does not use any database or persistent storage. Configuration stat
 
 The config server is a **foundational infrastructure service**. Every microservice in the `spring-petclinic-microservices` product that uses Spring Cloud Config Client will call this service at startup (and optionally on refresh) to retrieve its configuration. Expected consumers include:
 
-| Caller (expected) | Protocol | Purpose |
+| Caller | Protocol | Purpose |
 |---|---|---|
-| `spring-petclinic-customers-service` | HTTP (`GET /config`) | Fetch application configuration at boot |
-| `spring-petclinic-vets-service` | HTTP (`GET /config`) | Fetch application configuration at boot |
-| `spring-petclinic-visits-service` | HTTP (`GET /config`) | Fetch application configuration at boot |
-| `spring-petclinic-api-gateway` | HTTP (`GET /config`) | Fetch application configuration at boot |
+| `spring-petclinic-customers-service` | HTTP (`GET /config`) | Fetch application configuration at bootstrap |
+| `spring-petclinic-vets-service` | HTTP (`GET /config`) | Fetch application configuration at bootstrap |
+| `spring-petclinic-visits-service` | HTTP (`GET /config`) | Fetch application configuration at bootstrap |
+| `spring-petclinic-api-gateway` | HTTP (`GET /config`) | Fetch application configuration at bootstrap |
 
-Default endpoint pattern: `http://{config-server-host}:{port}/{application}/{profile}[/{label}]`
+Typical endpoint pattern: `http://config-server:8888/{application}/{profile}[/{label}]`
 
-**Impact note:** If `spring-petclinic-config-server` is unavailable, all dependent microservices will fail to start or will fall back to local configuration (if configured). This makes the config server a **single point of failure** for the entire product unless client-side retry and fallback strategies are in place. See [SCENARIOS.md](SCENARIOS.md) for failure scenario analysis.
+### Blast Radius
+
+An outage or misconfiguration of this service will **prevent all dependent microservices from starting or refreshing their configuration**. This makes the config server a single point of failure for the entire product unless clients are configured with local fallback profiles.
 
 ---
 
 ## See Also
 
 - [spring-petclinic-microservices-config repository](https://github.com/spring-petclinic/spring-petclinic-microservices-config) — the Git-backed configuration source
-- [SCENARIOS.md](SCENARIOS.md) — failure scenarios and cascading impact analysis
-- [spring-petclinic-microservices root repository](https://github.com/spring-petclinic/spring-petclinic-microservices) — product-level documentation and service graph
-- [Spring Cloud Config Server reference documentation](https://docs.spring.io/spring-cloud-config/docs/current/reference/html/#_spring_cloud_config_server) — configuration options for Git backend, timeouts, and retry
+- [spring-petclinic-microservices repository](https://github.com/spring-petclinic/spring-petclinic-microservices) — parent product repository
+- [SCENARIOS.md](SCENARIOS.md) — failure scenarios and runbooks for this service
+- [Spring Cloud Config Server documentation](https://docs.spring.io/spring-cloud-config/docs/current/reference/html/#_spring_cloud_config_server) — upstream reference

@@ -11,7 +11,7 @@ When an AI agent answers a question about your service, it either:
 - **Reads the raw source code** — scans hundreds of files, uses 50–150K tokens per question, misses context that spans multiple files, and costs money every single time.
 - **Uses svcmap docs** — reads one focused Markdown document (2–5K tokens), gets structured facts with Mermaid diagrams and cross-references, and answers instantly from a local MCP tool.
 
-svcmap generates structured documentation — API contracts, execution scenarios with sequence diagrams, dependency graphs, data models, runbooks — and serves them through an MCP server that any AI assistant can query.
+svcmap generates structured documentation — API contracts, execution scenarios with sequence diagrams, dependency graphs, data models, business rules, runbooks — and serves them through an MCP server that any AI assistant can query.
 
 ---
 
@@ -21,7 +21,7 @@ svcmap generates structured documentation — API contracts, execution scenarios
 # 1. Install
 npm install -g svcmap   # or: node svcmap.js if running from source
 
-# 2. Bootstrap a knowledge base (accepts GitHub URLs)
+# 2. Bootstrap a knowledge base (accepts any GitHub URL)
 svcmap init
 
 # 3. Fill in your API keys
@@ -34,6 +34,9 @@ svcmap generate
 
 # 5. Start the MCP server
 svcmap serve
+
+# 6. (Optional) See how much token reduction you're getting
+svcmap benchmark
 ```
 
 ---
@@ -44,20 +47,28 @@ svcmap serve
 GitHub repos
     │
     ▼
-[CrawlRepo]  ──── up to 300 files per service, prioritised by category
+[CrawlRepo]  ──── all relevant files, no cap (files >300KB skipped)
+    │              priority-sorted: routes → schemas → source → tests
     │
     ▼
-[Extract]  ──── 10 parallel LLM passes per service
-    │             Identity · API Contracts · Scenarios · Dependencies
-    │             Data Model · DTOs · Config · Errors · Table Map
-    │             Coding Standards · Runbook Signals
+[Extract]  ──── 12 sequential extraction passes per service
+    │             Large repos split into file-boundary chunks (map → reduce)
+    │
+    │  Identity · API Contracts · Scenarios · Dependencies · Data Model
+    │  Config · Errors · Table Map · Coding Standards · Runbook Signals
+    │  Module Graph · Business Rules
+    │
     ▼
-[Generate]  ──── one document per extraction, 20K token budget
-    │             OVERVIEW · API · SCENARIOS · DEPENDENCIES · DATA_MODEL
-    │             TABLE_MAP · CONFIG · ERRORS · CODING_STANDARDS · RUNBOOK
+[Generate]  ──── one Markdown document per extraction, 20K token budget
+    │
+    │  OVERVIEW · API · SCENARIOS · DEPENDENCIES · DATA_MODEL · TABLE_MAP
+    │  CONFIG · ERRORS · CODING_STANDARDS · RUNBOOK · ARCHITECTURE
+    │  BUSINESS_RULES
+    │
     ▼
-[ProductAgent]  ── PRODUCT.md (service map + Mermaid dependency graph)
-    │              INDEX.md (semantic router for agents)
+[ProductAgent]  ── PRODUCT.md   (service map + Mermaid dependency graph)
+    │              DATAFLOW.md  (event flows, data ownership, external deps)
+    │              INDEX.md     (semantic router for agents)
     ▼
 [MCP Server]  ──── tools: find_service · get_service_doc · list_services
                           get_table · search_index · get_dependencies
@@ -65,9 +76,36 @@ GitHub repos
 
 ---
 
-## Supported repo formats
+## What each document contains
 
-svcmap accepts any GitHub URL format:
+### Per-service documents (12 per service)
+
+| Document | What's inside |
+|---|---|
+| `OVERVIEW.md` | Purpose, type, language, entry points, key abstractions |
+| `API.md` | Every endpoint with method, auth, request/response shape, status codes, events |
+| `SCENARIOS.md` | End-to-end execution paths with **Mermaid sequence diagrams**, exact function signatures, code snippets, branch conditions, state transitions, test coverage |
+| `BUSINESS_RULES.md` | **State machines** (stateDiagram-v2), business rules with conditions and error codes, permission matrix, calculation formulas |
+| `DATA_MODEL.md` | DB entities with all fields and constraints, **DTOs and transfer objects** with validation rules |
+| `TABLE_MAP.md` | Which tables this service owns vs reads, per-feature usage |
+| `DEPENDENCIES.md` | Outbound calls, databases, third-party integrations with timeout/retry config |
+| `ARCHITECTURE.md` | Layer diagram (graph TD), module dependency graph (graph LR), circular dependency detection |
+| `CONFIG.md` | All env vars, feature flags, deployment notes |
+| `ERRORS.md` | Error catalogue with HTTP status, retryability, recovery hints |
+| `CODING_STANDARDS.md` | Architecture pattern, layer rules, naming conventions, anti-patterns |
+| `RUNBOOK.md` | Health checks, startup/shutdown, failure modes, rollback steps, escalation |
+
+### Product-level documents
+
+| Document | What's inside |
+|---|---|
+| `PRODUCT.md` | Service map table, Mermaid dependency graph, tech stack, debugging entry points |
+| `DATAFLOW.md` | Service call graph, event/message flows, data ownership, external integrations |
+| `INDEX.md` | Semantic router — agents start here to find the right service and document |
+
+---
+
+## Supported repo formats
 
 ```bash
 # Standard repo
@@ -80,7 +118,7 @@ https://github.com/myorg/monorepo/tree/main/services/payment
 myorg/payment-service
 ```
 
-Pass these during `svcmap init` or write them directly in `svcmap.config.yaml`.
+Pass these during `svcmap init` (comma-separated for multiple services) or write them directly in `svcmap.config.yaml`.
 
 ---
 
@@ -121,10 +159,12 @@ services:
   frontend:
     repo: myorg/frontend
     branch: main
-    type: ui
 
 generation:
-  parallelism: 3
+  # Default: 1 (sequential). Safe for Anthropic basic tier (50K TPM).
+  # Increase to 3 if you are on a higher API tier.
+  parallelism: 1
+
   documents:
     service:
       overview: true
@@ -132,11 +172,13 @@ generation:
       scenarios: true
       dependencies: true
       data_model: true
-      table_map: false       # disable per doc type
+      table_map: true
       config: true
       errors: true
       coding_standards: true
       runbook: true
+      architecture: true
+      business_rules: true
 ```
 
 ---
@@ -152,6 +194,7 @@ generation:
 | `svcmap generate --save-extractions` | Write raw extraction JSON to `meta/extracted/` for debugging |
 | `svcmap status` | Show which services have stale docs (behind latest commit) |
 | `svcmap serve` | Start the MCP server (stdio transport) |
+| `svcmap benchmark` | Show token reduction vs reading raw source code directly |
 
 ---
 
@@ -164,10 +207,10 @@ The MCP server exposes tools and prompts that agents can call:
 | Tool | What it does |
 |---|---|
 | `find_service` | Find which service owns a feature, endpoint, or table |
-| `get_service_doc` | Get a specific doc (OVERVIEW, API, SCENARIOS, etc.) for a service |
+| `get_service_doc` | Get a specific doc (OVERVIEW, API, SCENARIOS, BUSINESS_RULES, etc.) for a service |
 | `list_services` | List all services with summaries |
 | `get_table` | Get schema and ownership for a specific database table |
-| `search_index` | Semantic search across the knowledge base |
+| `search_index` | Search across the knowledge base |
 | `get_dependencies` | Get the dependency graph for a service |
 
 **Prompts**
@@ -220,31 +263,47 @@ knowledge/
   INDEX.md                          ← semantic router — agents start here
   products/
     my-platform/
-      PRODUCT.md                    ← product overview, service map, dependency graph
+      PRODUCT.md                    ← service map, dependency graph, debugging guide
+      DATAFLOW.md                   ← event flows, data ownership, external integrations
       services/
         payment/
           OVERVIEW.md               ← purpose, entry points, key abstractions
           API.md                    ← all endpoints with request/response shapes
-          SCENARIOS.md              ← execution paths with Mermaid sequence diagrams
+          SCENARIOS.md              ← execution paths, sequence diagrams, code snippets
+          BUSINESS_RULES.md         ← state machines, rules, permissions, formulas
           DEPENDENCIES.md           ← outbound calls, databases, third-party
-          DATA_MODEL.md             ← DB entities + DTOs + request/response objects
+          DATA_MODEL.md             ← DB entities, DTOs, request/response objects
           TABLE_MAP.md              ← which tables this service owns/reads
           CONFIG.md                 ← env vars, feature flags, deployment notes
           ERRORS.md                 ← error catalogue with recovery hints
-          CODING_STANDARDS.md       ← architecture patterns, conventions
-          RUNBOOK.md                ← health checks, failure modes, rollback steps
+          CODING_STANDARDS.md       ← architecture patterns, naming conventions
+          RUNBOOK.md                ← health checks, failure modes, rollback
+          ARCHITECTURE.md           ← layer diagram, module graph, circular deps
   meta/
     svcmap.config.yaml
-    .env                            ← gitignored
-    checksums.json                  ← tracks HEAD SHA per service for staleness detection
-    extracted/                      ← raw extraction JSON (--save-extractions only)
+    .env                            ← gitignored (contains API keys)
+    checksums.json                  ← HEAD SHA per service for staleness detection
+    crawl_stats.json                ← files crawled + chars per service (used by benchmark)
+    extracted/                      ← gitignored (--save-extractions debug output)
 ```
+
+### Should you commit the knowledge folder?
+
+**Yes — commit it to your product repo, not to the svcmap tool repo.**
+
+The generated Markdown files are the product: they're what your team and AI agents read. Treat them like compiled documentation — regenerate when services change (`svcmap status` tells you what's stale), review the diff in PRs, and let the knowledge base evolve alongside the code.
+
+What to gitignore (these are already excluded by `svcmap init`):
+- `meta/.env` — contains your API keys
+- `meta/extracted/` — raw JSON debug dumps from `--save-extractions`
+
+Everything else (`*.md`, `checksums.json`, `crawl_stats.json`) should be committed.
 
 ---
 
 ## Monorepo support
 
-Point svcmap at any subdirectory of a monorepo by pasting the GitHub tree URL:
+Point svcmap at any subdirectory of a monorepo using the GitHub tree URL:
 
 ```
 svcmap init
@@ -259,7 +318,21 @@ svcmap init
     • spring-petclinic-visits-service     →  github.com/spring-petclinic/spring-petclinic-microservices (spring-petclinic-visits-service/)
 ```
 
-Each service is crawled with `include_paths` scoped to its subdirectory. The same monorepo is fetched once per service (caching planned).
+Each service is crawled with `include_paths` scoped to its subdirectory so only relevant files are fetched.
+
+---
+
+## Rate limits and API tier
+
+svcmap uses two LLM calls per extraction pass — extraction (Haiku) and generation (Opus). For large repos, chunked extraction makes multiple sequential calls per skill.
+
+| Tier | Recommended `parallelism` | Notes |
+|---|---|---|
+| Anthropic basic | `1` (default) | Sequential — one service at a time, one skill at a time |
+| Anthropic tier 2+ | `3` | Three services in parallel, safe throughput |
+| OpenAI (gpt-4o) | `2–3` | Depends on your rate tier |
+
+The SDK automatically retries 429s with exponential backoff (`maxRetries: 4`). Extraction skills also add a 4-second gap between chunk calls to pace token throughput on constrained tiers.
 
 ---
 
@@ -267,7 +340,7 @@ Each service is crawled with `include_paths` scoped to its subdirectory. The sam
 
 - Node.js ≥ 20
 - An Anthropic API key (`sk-ant-...`) or OpenAI API key
-- A GitHub personal access token with `read:contents` scope (no other scopes needed for public repos)
+- A GitHub personal access token (no scopes needed for public repos; `repo` scope for private repos)
 
 ---
 
@@ -275,12 +348,12 @@ Each service is crawled with `include_paths` scoped to its subdirectory. The sam
 
 | Package | Description |
 |---|---|
-| `@svcmap/cli` | CLI commands: init, generate, status, serve |
+| `@svcmap/cli` | CLI commands: init, generate, status, serve, benchmark |
 | `@svcmap/agents` | ProductAgent and ServiceAgent orchestration |
-| `@svcmap/skills` | Extraction and generation skills (LLM prompts + schemas) |
-| `@svcmap/providers` | LLM (Claude, OpenAI) and Git (GitHub) provider adapters |
+| `@svcmap/skills` | 12 extraction skills + 12 generation skills, chunked map-reduce for large repos |
+| `@svcmap/providers` | LLM (Claude, OpenAI) and Git (GitHub) adapters with retry |
 | `@svcmap/mcp-server` | MCP server with tools and prompts |
-| `@svcmap/config` | Config schema, loading, and URL parsing |
+| `@svcmap/config` | Config schema, loading, and GitHub URL parsing |
 
 ---
 
