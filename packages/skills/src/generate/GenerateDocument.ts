@@ -176,12 +176,23 @@ ${JSON.stringify(ex.api, null, 2)}
 
 Write an API.md with these exact sections:
 1. # API Reference — {Service Name}
-2. ## TL;DR for Agents (total endpoint count, auth mechanism, most important endpoints)
-3. ## Authentication (how to authenticate, token format)
-4. ## Base URL (table per environment)
-5. One section per endpoint: ## {METHOD} {path}, with: Purpose, Auth, Request body, Response (success + errors table)
-6. ## Events (if applicable: topics published/subscribed, event payload shape)
-7. ## See Also`;
+2. ## TL;DR for Agents (total endpoint count, auth mechanism, most important 3 endpoints, any rate limits)
+3. ## Authentication
+   - How to authenticate (token format, header name, scope required)
+   - What happens on auth failure (HTTP status + error body)
+   - Any endpoints that are public (no auth required) — call these out explicitly
+4. ## Base URL (table per environment if known, otherwise note "derived from config")
+5. One section per endpoint group, then one subsection per endpoint: ### {METHOD} {path}
+   - **Purpose** — one sentence
+   - **Auth required** — role/scope/ownership check if applicable
+   - **Rate limit** — if known
+   - **Request** — table of body fields (field, type, required, description) + example JSON
+   - **Response** — success shape as JSON example, then errors table (status | code | when | retryable)
+   - **Side effects** — DB writes, events emitted, external calls triggered
+6. ## gRPC / GraphQL (if applicable: service definition, type list)
+7. ## Events (topics published/subscribed, payload shape, ordering guarantees)
+8. ## Deprecations & Versioning (any deprecated endpoints, migration path)
+9. ## See Also`;
 }
 
 function buildScenariosPrompt(header: string, ex: ServiceExtractions): string {
@@ -240,12 +251,27 @@ ${JSON.stringify(ex.dependencies, null, 2)}
 
 Write a DEPENDENCIES.md with these exact sections:
 1. # Dependencies — {Service Name}
-2. ## TL;DR for Agents (summary: N outbound calls, N databases, key external deps)
-3. ## Outbound Calls (table: target, type, endpoint/topic, purpose, timeout, retries, is-external)
-4. ## Databases & Storage (table: name, type, purpose, shared/private)
-5. ## Third-Party Integrations (table: name, category, SDK, purpose)
-6. ## Inbound Calls (who calls this service — note: populated from product-level graph, may be incomplete)
-7. ## See Also`;
+2. ## TL;DR for Agents
+   - N outbound internal service calls, N databases, N third-party integrations
+   - Which dependencies have circuit breakers vs none (risk indicator)
+   - Most critical dependency (single point of failure if any)
+3. ## Outbound Service Calls
+   - Table: Target | Type | Endpoint/Topic | Purpose | Timeout | Retries | Circuit Breaker | Auth Method
+   - One subsection per dependency with: fallback behavior paragraph, failure impact
+4. ## Databases & Storage
+   - Table: Name | Type | Ownership | Purpose
+   - Note which are shared across services (coordination risk)
+5. ## Third-Party Integrations
+   - Table: Name | Category | SDK/Package | Purpose | Has Fallback
+6. ## Inbound Callers
+   - See [DEPENDENCY_GRAPH.md](DEPENDENCY_GRAPH.md) for the full bidirectional call graph.
+   - Note any inbound contracts this service must not break (stable API surface).
+7. ## Resilience Assessment
+   - Bulleted summary: which dependencies are protected (circuit breaker + retry), which are unprotected single points of failure
+   - Recommendation for any unprotected critical paths
+8. ## See Also
+   - [DEPENDENCY_GRAPH.md](DEPENDENCY_GRAPH.md) — visual graph with inbound callers and impact analysis
+   - [RUNBOOK.md](RUNBOOK.md) — what to do when a dependency goes down`;
 }
 
 function buildDataModelPrompt(header: string, ex: ServiceExtractions): string {
@@ -336,25 +362,52 @@ Write a CODING_STANDARDS.md with these exact sections:
 }
 
 function buildRunbookPrompt(header: string, ex: ServiceExtractions): string {
+  // Surface dependency failure modes to enrich runbook
+  const unprotectedDeps = ex.dependencies?.outbound?.filter(d => !d.circuitBreaker) ?? [];
+  const criticalDbs = ex.dependencies?.databases ?? [];
+
   return `${header}
 
 ## Extracted Runbook Signals
 ${JSON.stringify(ex.runbookSignals, null, 2)}
 
 ## Service Identity
-${JSON.stringify({ type: ex.identity?.type, dependencies: ex.dependencies?.databases }, null, 2)}
+${JSON.stringify({ type: ex.identity?.type, databases: criticalDbs }, null, 2)}
+
+## Unprotected Dependencies (no circuit breaker — single point of failure risk)
+${JSON.stringify(unprotectedDeps.map(d => ({ target: d.target, type: d.type, fallback: d.fallbackBehavior })), null, 2)}
+
+## Known Failure Modes from Scenarios
+${JSON.stringify(ex.scenarios?.scenarios?.flatMap(s => s.failureModes).slice(0, 20) ?? [], null, 2)}
 
 Write a RUNBOOK.md with these exact sections:
 1. # Runbook — {Service Name}
-2. ## TL;DR for Agents (health check endpoint, most common failure, is restart safe?)
-3. ## Service Identity (table: health endpoint, metrics, deployment platform, scaling)
-4. ## Startup Procedure (numbered steps)
-5. ## Graceful Shutdown (description of SIGTERM handling)
-6. ## Common Failure Modes (one subsection per failure: Symptom, Likely Cause, Immediate Action, Investigation Steps)
-7. ## Rollback Procedure (numbered steps)
-8. ## Useful Commands (code blocks with descriptions)
-9. ## Environment Notes
-10. ## Escalation (table: situation, who to contact)
+2. ## TL;DR for Agents
+   - Health check endpoint, readiness vs liveness distinction if present
+   - Is a restart safe? (stateless/stateful)
+   - Most common failure mode and its immediate fix
+   - Which unprotected dependencies are the highest risk
+3. ## Quick Reference
+   - Table: health endpoint, metrics endpoint, log location, restart command, deployment platform
+4. ## Startup Procedure (numbered steps with expected log line or signal that each step succeeded)
+5. ## Graceful Shutdown (SIGTERM handling, drain timeout, in-flight request behaviour)
+6. ## Common Failure Modes
+   - One subsection per failure mode: ### {Symptom}
+   - **Symptom** — what is observable (log message, metric spike, HTTP error)
+   - **Likely Cause** — 2-3 bullet ranked by probability
+   - **Immediate Action** — one command or action to take right now
+   - **Investigation Steps** — numbered, with exact commands (kubectl logs, curl health check, DB query)
+   - **Resolution** — how to fix it
+   - **Post-resolution** — what to verify it's fixed
+   - Include failure modes for each unprotected dependency listed above
+7. ## Dependency Failure Playbook
+   - One subsection per critical dependency: ### If {dependency} is down
+   - What this service does (fails fast / degrades / uses fallback)
+   - How to verify the dependency status
+   - When to escalate vs wait
+8. ## Rollback Procedure (numbered steps)
+9. ## Useful Commands (code blocks with descriptions — health check, log tailing, DB connection test)
+10. ## Escalation (table: situation | action | who | when to escalate)
 11. ## See Also`;
 }
 

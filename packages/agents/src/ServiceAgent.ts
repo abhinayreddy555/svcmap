@@ -178,6 +178,16 @@ export class ServiceAgent {
       }
     }
 
+    // ── Step 5: Write per-service INDEX.md ───────────────────────────────────
+    try {
+      const indexContent = buildServiceIndex(serviceName, productName, extractions.repo, docTypes, extractions);
+      await fs.writeFile(path.join(serviceOutDir, 'INDEX.md'), indexContent);
+      generatedDocs.push(path.join(serviceOutDir, 'INDEX.md'));
+      log.info('  ✓ INDEX.md');
+    } catch (err) {
+      log.warn(`  INDEX.md failed: ${err}`);
+    }
+
     // Build lightweight summary for product-level overview and data flow
     const extractedSummary = identity ? {
       type: identity.type,
@@ -255,4 +265,71 @@ function consoleLogger(prefix: string): Logger {
     error: (msg, err) => console.error(`  [${prefix}] ERROR: ${msg}`, err ?? ''),
     debug: (msg) => process.env.SVCMAP_DEBUG ? console.log(`  [${prefix}] DEBUG: ${msg}`) : undefined,
   };
+}
+
+// ─── Per-service INDEX.md builder (template-based, no LLM) ───────────────────
+
+const DOC_META: Record<string, { desc: string; startHereIf: string }> = {
+  'OVERVIEW':         { desc: 'Purpose, type, language, entry points, key abstractions', startHereIf: "You're new to this service" },
+  'API':              { desc: 'All endpoints, auth, request/response shapes, events', startHereIf: 'You need to call this service or debug an endpoint' },
+  'SCENARIOS':        { desc: 'End-to-end execution flows with Mermaid sequence diagrams and code-level detail', startHereIf: "You're investigating a bug or tracing a feature" },
+  'BUSINESS_RULES':   { desc: 'State machines, permission matrix, calculation formulas, constraints', startHereIf: 'You need to understand allowed transitions or permissions' },
+  'DATA_MODEL':       { desc: 'DB entities, DTOs, validation rules, request/response objects', startHereIf: "You're working with the database layer or data contracts" },
+  'TABLE_MAP':        { desc: 'Which tables this service owns vs reads, per-feature usage', startHereIf: "You're planning a schema change or need table ownership" },
+  'DEPENDENCIES':     { desc: 'Outbound calls, databases, third-party with timeout/retry/circuit-breaker', startHereIf: 'You need to understand what this service depends on' },
+  'DEPENDENCY_GRAPH': { desc: 'Visual bidirectional graph: inbound callers, outbound calls, events, impact analysis', startHereIf: "You're assessing blast radius of a change" },
+  'ARCHITECTURE':     { desc: 'Layer diagram, module dependency graph, circular dependency detection', startHereIf: "You're reviewing or modifying the internal code structure" },
+  'CONFIG':           { desc: 'Environment variables, feature flags, deployment notes', startHereIf: "You're deploying or configuring this service" },
+  'ERRORS':           { desc: 'Error catalogue with HTTP status, retryability, recovery hints', startHereIf: "You're handling errors from this service" },
+  'CODING_STANDARDS': { desc: 'Architecture patterns, layer rules, naming conventions, anti-patterns', startHereIf: "You're contributing code to this service" },
+  'RUNBOOK':          { desc: 'Health checks, startup/shutdown, failure modes, rollback, escalation', startHereIf: "You're on-call or doing a deployment" },
+};
+
+function buildServiceIndex(
+  serviceName: string,
+  productName: string,
+  repo: string,
+  docTypes: DocType[],
+  ex: ServiceExtractions,
+): string {
+  const identity = ex.identity;
+  const now = new Date().toISOString();
+
+  const docRows = [
+    ...docTypes.map((dt) => {
+      const meta = DOC_META[dt];
+      return `| [${dt}.md](${dt}.md) | ${meta?.desc ?? '—'} | ${meta?.startHereIf ?? '—'} |`;
+    }),
+    `| [DEPENDENCY_GRAPH.md](DEPENDENCY_GRAPH.md) | ${DOC_META['DEPENDENCY_GRAPH'].desc} | ${DOC_META['DEPENDENCY_GRAPH'].startHereIf} |`,
+  ].join('\n');
+
+  const quickFacts = identity ? `## Quick Facts
+
+| Property | Value |
+|---|---|
+| Type | \`${identity.type}\` |
+| Language | ${identity.primaryLanguage} |
+| Framework | ${identity.framework ?? '—'} |
+| Repo | [${repo}](https://github.com/${repo}) |
+| Databases | ${ex.dependencies?.databases?.map((d) => d.name).join(', ') || '—'} |
+| Outbound calls | ${ex.dependencies?.outbound?.filter((d) => !d.isExternal).map((d) => d.target).join(', ') || 'none'} |
+
+` : '';
+
+  return `<!-- generated: ${now} -->
+# ${serviceName} — Service Index
+
+> **Product:** ${productName}${identity ? ` · ${identity.type} · ${identity.primaryLanguage}${identity.framework ? ` · ${identity.framework}` : ''}` : ''}
+
+${identity?.purpose ? `${identity.purpose}\n\n` : ''}${quickFacts}## Documents
+
+| Document | Contents | Start here if... |
+|---|---|---|
+${docRows}
+
+## See Also
+- [../PRODUCT.md](../PRODUCT.md) — full service map for ${productName}
+- [../DATAFLOW.md](../DATAFLOW.md) — product-level event and data flows
+- [../../INDEX.md](../../INDEX.md) — knowledge base root index
+`;
 }

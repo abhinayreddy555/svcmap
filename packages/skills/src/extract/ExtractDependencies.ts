@@ -12,6 +12,9 @@ export const DependencySchema = z.object({
   timeoutMs: z.number().nullish().default(null),
   retries: z.number().nullish().default(null),
   isExternal: z.boolean().catch(false).describe('true if this is a 3rd-party service (Stripe, SendGrid, etc.)'),
+  circuitBreaker: z.boolean().catch(false).describe('true if a circuit breaker or bulkhead is configured for this dependency'),
+  fallbackBehavior: z.string().nullish().default(null).describe('What happens when this dependency is unavailable — e.g. "returns cached result", "throws 503", "degrades gracefully"'),
+  authMethod: z.string().nullish().default(null).describe('How this service authenticates to the dependency — e.g. "mTLS", "API key in header", "service account JWT"'),
 });
 
 export const DependenciesSchema = z.object({
@@ -36,6 +39,8 @@ const SCHEMA = JSON.stringify({
     target: 'inventory-service', type: 'rest', direction: 'outbound',
     endpoint: 'GET /inventory/{sku}', purpose: 'Check stock availability before creating order',
     timeoutMs: 3000, retries: 2, isExternal: false,
+    circuitBreaker: true, fallbackBehavior: 'returns 503 if inventory unreachable',
+    authMethod: 'service account JWT in Authorization header',
   }],
   databases: [{
     name: 'orders-db', type: 'postgresql',
@@ -58,9 +63,14 @@ export const ExtractDependenciesSkill: Skill<RawAssets, Dependencies> = {
     const content = formatAllAssets(input, ['source', 'config', 'dependency-manifest', 'route', 'event', 'schema']);
 
     const instruction = `Extract ALL dependencies this service has on other systems.
-Look for: HTTP client calls (fetch, axios, requests, HttpClient), database connections, queue/topic consumers and producers,
-SDK imports (stripe, sendgrid, auth0, etc.), gRPC client stubs, GraphQL client calls.
-For each dependency, identify: what is being called, why, with what timeout/retry config.`;
+Look for: HTTP client calls (fetch, axios, requests, HttpClient, Feign, RestTemplate), database connections,
+queue/topic consumers and producers, SDK imports (stripe, sendgrid, auth0, etc.), gRPC client stubs, GraphQL clients.
+For each dependency capture:
+- target name, call type, endpoint/topic, and purpose
+- timeout and retry configuration (look for @Retryable, retry policy objects, timeout constants)
+- circuit breaker usage (Hystrix, Resilience4j, Polly, opossum, go-circuit-breaker)
+- fallback behavior when the dependency is unavailable
+- how authentication is passed (API key, mTLS, service token, none)`;
 
     const parse = (raw: string) => DependenciesSchema.parse(JSON.parse(extractJSON(raw)));
 
