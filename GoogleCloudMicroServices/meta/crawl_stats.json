@@ -1,0 +1,25 @@
+{
+  "generated": "2026-04-13T05:28:31.143Z",
+  "services": {
+    "cartservice": {
+      "filesCrawled": 13,
+      "crawledChars": 36028
+    },
+    "checkoutservice": {
+      "filesCrawled": 8,
+      "crawledChars": 164194
+    },
+    "productcatalogservice": {
+      "filesCrawled": 10,
+      "crawledChars": 160546
+    },
+    "paymentservice": {
+      "filesCrawled": 10,
+      "crawledChars": 248602
+    },
+    "recommendationservice": {
+      "filesCrawled": 7,
+      "crawledChars": 51650
+    }
+  }
+}

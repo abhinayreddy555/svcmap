@@ -7,25 +7,36 @@ export const EndpointSchema = z.object({
   method: z.string(),
   path: z.string(),
   purpose: z.string(),
-  auth: z.string().nullable().describe('Auth mechanism: JWT, API key, none, etc.'),
-  requestBody: z.string().nullable().describe('Brief description of request body shape'),
-  responseBody: z.string().nullable().describe('Brief description of response shape'),
-  statusCodes: z.array(z.object({ code: z.number(), meaning: z.string() })),
-  tags: z.array(z.string()),
+  auth: z.string().nullish().default(null).describe('Auth mechanism: JWT, API key, none, etc.'),
+  requestBody: z.string().nullish().default(null).describe('Brief description of request body shape'),
+  responseBody: z.string().nullish().default(null).describe('Brief description of response shape'),
+  // LLM sometimes returns status codes as strings ("200") — coerce to number
+  statusCodes: z.array(z.object({
+    code: z.union([z.number(), z.string()]).transform((v) => Number(v)),
+    meaning: z.string(),
+  })).catch([]),
+  tags: z.array(z.string()).catch([]),
 });
 
+// gRPC services: LLM may return strings ("CartService") or objects ({ name, methods })
+const GrpcServiceSchema = z.union([
+  z.string(),
+  z.object({ name: z.string(), methods: z.array(z.string()).catch([]) })
+    .transform((o) => o.name),
+]).catch('unknown');
+
 export const APIContractsSchema = z.object({
-  baseUrl: z.string().nullable(),
-  authMechanism: z.string().nullable().describe('Global auth mechanism for this service'),
-  endpoints: z.array(EndpointSchema),
+  baseUrl: z.string().nullish().default(null),
+  authMechanism: z.string().nullish().default(null).describe('Global auth mechanism for this service'),
+  endpoints: z.array(EndpointSchema).catch([]),
   events: z.array(z.object({
-    direction: z.enum(['publishes', 'subscribes']),
+    direction: z.enum(['publishes', 'subscribes']).catch('publishes'),
     topic: z.string(),
-    eventName: z.string().nullable(),
+    eventName: z.string().nullish().default(null),
     description: z.string(),
-  })),
-  graphqlTypes: z.array(z.string()).describe('Top-level GraphQL types if applicable'),
-  grpcServices: z.array(z.string()).describe('gRPC service names if applicable'),
+  })).catch([]),
+  graphqlTypes: z.array(z.string()).catch([]).describe('Top-level GraphQL types if applicable'),
+  grpcServices: z.array(GrpcServiceSchema).catch([]).describe('gRPC service names if applicable'),
 });
 export type APIContracts = z.infer<typeof APIContractsSchema>;
 
@@ -49,7 +60,7 @@ export const ExtractAPIContractsSkill: Skill<RawAssets, APIContracts> = {
   description: 'Extract all API endpoints, events, and messaging contracts from a service',
   tier: 'extraction',
   inputSchema: z.any() as any,
-  outputSchema: APIContractsSchema,
+  outputSchema: APIContractsSchema as any,
 
   async execute(input: RawAssets, ctx: SkillContext): Promise<APIContracts> {
     const content = formatAllAssets(input, ['api-spec', 'route', 'event', 'entry-point']);

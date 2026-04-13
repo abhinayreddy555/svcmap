@@ -64,7 +64,18 @@ export async function startMCPServer(options: MCPServerOptions): Promise<void> {
   }));
 
   // ── Start stdio transport ─────────────────────────────────────────────────
+  // MCP stdio transport uses stdout for the JSON-RPC protocol and stderr for
+  // human-readable output. Writing to stdout here would corrupt the protocol.
   const transport = new StdioServerTransport();
   await server.connect(transport);
+
+  process.stderr.write(
+    `\nsvcmap MCP server running (stdio transport)\n` +
+    `Knowledge base: ${knowledgeDir}\n` +
+    `Product: ${config.product.name} — ${Object.keys(config.services).length} service(s)\n\n` +
+    `Connect via Claude Desktop, VS Code MCP extension, or any MCP client.\n` +
+    `The server reads JSON-RPC from stdin and writes responses to stdout.\n` +
+    `Press Ctrl+C to stop.\n\n`,
+  );
   // Server runs until stdin closes
 }
