@@ -7,3 +7,7 @@ dist/
 .DS_Store
 .turbo/
 coverage/
+
+# svcmap
+knowledge/meta/.env
+knowledge/meta/extracted/
