@@ -1,3 +1,10 @@
 {
-  "spring-petclinic-microservices": "597ad1fbfabadfef4ed8a1d475f7f34aa2666aab"
+  "spring-petclinic-admin-server": "597ad1fbfabadfef4ed8a1d475f7f34aa2666aab",
+  "spring-petclinic-api-gateway": "597ad1fbfabadfef4ed8a1d475f7f34aa2666aab",
+  "spring-petclinic-config-server": "597ad1fbfabadfef4ed8a1d475f7f34aa2666aab",
+  "spring-petclinic-customers-service": "597ad1fbfabadfef4ed8a1d475f7f34aa2666aab",
+  "spring-petclinic-discovery-server": "597ad1fbfabadfef4ed8a1d475f7f34aa2666aab",
+  "spring-petclinic-genai-service": "597ad1fbfabadfef4ed8a1d475f7f34aa2666aab",
+  "spring-petclinic-vets-service": "597ad1fbfabadfef4ed8a1d475f7f34aa2666aab",
+  "spring-petclinic-visits-service": "597ad1fbfabadfef4ed8a1d475f7f34aa2666aab"
 }

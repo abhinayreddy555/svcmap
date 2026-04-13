@@ -1,0 +1,37 @@
+{
+  "generated": "2026-04-13T04:32:29.370Z",
+  "services": {
+    "spring-petclinic-admin-server": {
+      "filesCrawled": 4,
+      "crawledChars": 4549
+    },
+    "spring-petclinic-api-gateway": {
+      "filesCrawled": 40,
+      "crawledChars": 48671
+    },
+    "spring-petclinic-config-server": {
+      "filesCrawled": 5,
+      "crawledChars": 4715
+    },
+    "spring-petclinic-customers-service": {
+      "filesCrawled": 24,
+      "crawledChars": 37126
+    },
+    "spring-petclinic-discovery-server": {
+      "filesCrawled": 4,
+      "crawledChars": 4476
+    },
+    "spring-petclinic-genai-service": {
+      "filesCrawled": 17,
+      "crawledChars": 156607
+    },
+    "spring-petclinic-vets-service": {
+      "filesCrawled": 16,
+      "crawledChars": 21224
+    },
+    "spring-petclinic-visits-service": {
+      "filesCrawled": 14,
+      "crawledChars": 17674
+    }
+  }
+}

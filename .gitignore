@@ -3,11 +3,6 @@ dist/
 .env
 .env.local
 *.env
-
-# Generated knowledge base — this repo is the tool, not a product.
-# Users commit their own knowledge/ folder in their product repos.
-knowledge/
-
 *.log
 .DS_Store
 .turbo/

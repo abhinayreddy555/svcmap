@@ -42,7 +42,7 @@ function formatK(n: number): string {
 }
 
 function bar(pct: number, width = 20): string {
-  const filled = Math.round((pct / 100) * width);
+  const filled = Math.max(0, Math.min(width, Math.round((pct / 100) * width)));
   return chalk.green('█'.repeat(filled)) + chalk.dim('░'.repeat(width - filled));
 }
 
@@ -141,8 +141,9 @@ export function benchmarkCommand(): Command {
 
       for (const r of rows) {
         const reduction = `${r.reductionPct}%`;
+        const reductionColour = r.reductionPct >= 0 ? chalk.green : chalk.yellow;
         console.log(
-          `${r.service.padEnd(32)} ${String(r.filesCrawled).padStart(5)} ${formatK(r.rawTokens).padStart(13)} ${formatK(r.avgQueryTokens).padStart(13)} ${chalk.green(reduction.padStart(10))}`,
+          `${r.service.padEnd(32)} ${String(r.filesCrawled).padStart(5)} ${formatK(r.rawTokens).padStart(13)} ${formatK(r.avgQueryTokens).padStart(13)} ${reductionColour(reduction.padStart(10))}`,
         );
       }
 
@@ -150,8 +151,12 @@ export function benchmarkCommand(): Command {
       console.log(chalk.bold('\nPer-question token comparison (average across services)\n'));
 
       const pctBarWidth = 30;
+      const withBar = avgQueryWithout > 0 ? Math.round((avgQueryWith / avgQueryWithout) * 100) : 100;
+      const reductionLabel = avgReduction >= 0
+        ? chalk.green(`${avgReduction}% fewer`)
+        : chalk.yellow(`${Math.abs(avgReduction)}% more (docs larger than raw subset)`);
       console.log(`  Without svcmap  ${bar(100, pctBarWidth)} ${formatK(avgQueryWithout).padStart(7)} tokens`);
-      console.log(`  With svcmap     ${bar(100 - avgReduction, pctBarWidth)} ${formatK(avgQueryWith).padStart(7)} tokens   ${chalk.green(`${avgReduction}% fewer`)}`);
+      console.log(`  With svcmap     ${bar(withBar, pctBarWidth)} ${formatK(avgQueryWith).padStart(7)} tokens   ${reductionLabel}`);
 
       console.log(line);
       console.log(chalk.bold('\nKnowledge base size\n'));

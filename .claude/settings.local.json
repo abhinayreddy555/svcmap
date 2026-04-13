@@ -27,7 +27,9 @@
       "Bash(npx pnpm:*)",
       "Bash(ls /Users/abhinay/Documents/GitProjects/svcmap/*.js)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(pnpm --filter @svcmap/cli build)",
+      "Bash(npm run:*)"
     ]
   }
 }

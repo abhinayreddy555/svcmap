@@ -20,7 +20,7 @@ export const EntitySchema = z.object({
   primaryKey: z.string(),
   uniqueConstraints: z.array(z.string()),
   relationships: z.array(z.object({
-    type: z.enum(['one-to-one', 'one-to-many', 'many-to-many']),
+    type: z.enum(['one-to-one', 'one-to-many', 'many-to-many', 'many-to-one']),
     targetEntity: z.string(),
     description: z.string(),
   })),
