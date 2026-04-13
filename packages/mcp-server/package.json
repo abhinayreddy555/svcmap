@@ -1,0 +1,24 @@
+{
+  "name": "@svcmap/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "svcmap MCP server — expose knowledge base as MCP resources and tools",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@svcmap/config": "workspace:*",
+    "@svcmap/providers": "workspace:*",
+    "@svcmap/skills": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "fs-extra": "^11.2.0",
+    "glob": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4"
+  }
+}

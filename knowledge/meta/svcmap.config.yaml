@@ -1,0 +1,72 @@
+version: '1'
+product:
+  name: spring-petclinic-microservices
+  slug: spring-petclinic-microservices
+  description: test product for pet clicin
+knowledge_base:
+  output_dir: ./knowledge
+  commit_to_repo: false
+  gitignore_extracted: true
+provider:
+  git: github
+llm:
+  provider: claude
+  temperature: 0.2
+services:
+  spring-petclinic-admin-server:
+    repo: spring-petclinic/spring-petclinic-microservices
+    branch: main
+    include_paths:
+      - spring-petclinic-admin-server/
+  spring-petclinic-api-gateway:
+    repo: spring-petclinic/spring-petclinic-microservices
+    branch: main
+    include_paths:
+      - spring-petclinic-api-gateway/
+  spring-petclinic-config-server:
+    repo: spring-petclinic/spring-petclinic-microservices
+    branch: main
+    include_paths:
+      - spring-petclinic-config-server/
+  spring-petclinic-customers-service:
+    repo: spring-petclinic/spring-petclinic-microservices
+    branch: main
+    include_paths:
+      - spring-petclinic-customers-service/
+  spring-petclinic-discovery-server:
+    repo: spring-petclinic/spring-petclinic-microservices
+    branch: main
+    include_paths:
+      - spring-petclinic-discovery-server/
+  spring-petclinic-genai-service:
+    repo: spring-petclinic/spring-petclinic-microservices
+    branch: main
+    include_paths:
+      - spring-petclinic-genai-service/
+  spring-petclinic-vets-service:
+    repo: spring-petclinic/spring-petclinic-microservices
+    branch: main
+    include_paths:
+      - spring-petclinic-vets-service/
+  spring-petclinic-visits-service:
+    repo: spring-petclinic/spring-petclinic-microservices
+    branch: main
+    include_paths:
+      - spring-petclinic-visits-service/
+generation:
+  parallelism: 3
+  retry_attempts: 2
+  documents:
+    service:
+      overview: true
+      api: true
+      scenarios: true
+      dependencies: true
+      data_model: true
+      table_map: true
+      config: true
+      errors: true
+      coding_standards: true
+      runbook: true
+      architecture: true
+      business_rules: true

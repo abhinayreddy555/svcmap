@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x /Users/abhinay/Documents/GitProjects/svcmap/packages/cli/bin/svcmap.js)",
+      "Bash(pnpm install:*)",
+      "Bash(npm install:*)",
+      "Bash(sudo npm:*)",
+      "Bash(npm --version)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/abhinay/.npm/bin/**)",
+      "Read(//Users/abhinay/node_modules/.bin/**)",
+      "Bash(export PATH=\"$HOME/.npm-global/bin:$PATH\")",
+      "Bash(pnpm --version)",
+      "Bash(pnpm approve-builds:*)",
+      "Bash(pnpm build:*)",
+      "Bash(node /Users/abhinay/Documents/GitProjects/svcmap/packages/cli/dist/index.js --help)",
+      "Bash(node /Users/abhinay/Documents/GitProjects/svcmap/packages/cli/dist/index.js generate --help)",
+      "Bash(node /Users/abhinay/Documents/GitProjects/svcmap/packages/cli/dist/index.js init --help)",
+      "Bash(chmod +x /Users/abhinay/Documents/GitProjects/svcmap/svcmap.js)",
+      "Bash(node /Users/abhinay/Documents/GitProjects/svcmap/svcmap.js --version)",
+      "Bash(node /Users/abhinay/Documents/GitProjects/svcmap/svcmap.js --help)",
+      "Read(//private/tmp/**)",
+      "Bash(mkdir svcmap-test:*)",
+      "Bash(node /Users/abhinay/Documents/GitProjects/svcmap/svcmap.js demo --pick sock-shop-qs --out ./knowledge/meta/svcmap.config.yaml)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm --filter @svcmap/skills build)",
+      "Bash(npx pnpm:*)",
+      "Bash(ls /Users/abhinay/Documents/GitProjects/svcmap/*.js)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  }
+}
