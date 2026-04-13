@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>svcmap — Why It Matters</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2330;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-dim: #1f3a5f;
+      --green: #3fb950;
+      --green-dim: #1a3a22;
+      --yellow: #d29922;
+      --yellow-dim: #3a2e0a;
+      --purple: #bc8cff;
+      --purple-dim: #2d1f4e;
+      --red: #f85149;
+      --orange: #ffa657;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    section { padding: 80px 0; }
+    section + section { border-top: 1px solid var(--border); }
+
+    h1 { font-size: 3rem; font-weight: 700; line-height: 1.2; }
+    h2 { font-size: 1.9rem; font-weight: 600; margin-bottom: 12px; }
+    h3 { font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
+    p  { color: var(--muted); margin-bottom: 16px; }
+    p:last-child { margin-bottom: 0; }
+
+    .label {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,17,23,0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+    }
+    nav .inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .nav-logo { font-weight: 700; font-size: 1.1rem; color: var(--text); }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 24px; font-size: 0.9rem; color: var(--muted); }
+    .nav-links a { color: var(--muted); }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── Hero ── */
+    #hero {
+      padding: 100px 0 80px;
+      text-align: center;
+    }
+    #hero h1 { margin-bottom: 24px; }
+    #hero h1 em { font-style: normal; color: var(--accent); }
+    #hero .sub {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 680px;
+      margin: 0 auto 40px;
+    }
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-top: 48px;
+      flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 2.8rem; font-weight: 700; color: var(--green); line-height: 1; }
+    .stat-label { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── Problem ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-top: 40px;
+    }
+    @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px;
+    }
+    .card.bad  { border-color: var(--red);    background: #1a1214; }
+    .card.good { border-color: var(--green);  background: var(--green-dim); }
+
+    .card-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .card.bad  .card-tag { color: var(--red); }
+    .card.good .card-tag { color: var(--green); }
+
+    .card ul { list-style: none; padding: 0; }
+    .card ul li {
+      color: var(--muted);
+      font-size: 0.92rem;
+      padding: 5px 0;
+      padding-left: 20px;
+      position: relative;
+    }
+    .card ul li::before { position: absolute; left: 0; }
+    .card.bad  ul li::before { content: "✗"; color: var(--red); }
+    .card.good ul li::before { content: "✓"; color: var(--green); }
+
+    /* ── Pipeline ── */
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-top: 48px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .pipe-step {
+      flex: 1;
+      min-width: 160px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 18px;
+      text-align: center;
+      position: relative;
+    }
+    .pipe-step + .pipe-step { margin-left: 12px; }
+    .pipe-step + .pipe-step::before {
+      content: "→";
+      position: absolute;
+      left: -16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 1.2rem;
+    }
+    .pipe-icon { font-size: 1.8rem; margin-bottom: 10px; }
+    .pipe-name { font-weight: 600; font-size: 0.9rem; color: var(--text); margin-bottom: 4px; }
+    .pipe-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── User types ── */
+    .user-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 24px;
+      margin-top: 40px;
+    }
+    .user-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px;
+      transition: border-color 0.15s;
+    }
+    .user-card:hover { border-color: var(--accent); }
+    .user-card-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .user-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .user-card h3 { margin-bottom: 2px; }
+    .user-role { font-size: 0.8rem; color: var(--muted); }
+    .user-card ul { list-style: none; padding: 0; margin-top: 12px; }
+    .user-card ul li {
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding: 4px 0 4px 18px;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+    }
+    .user-card ul li:last-child { border-bottom: none; }
+    .user-card ul li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.85rem;
+    }
+    .highlight { color: var(--text); font-weight: 500; }
+
+    /* ── Benchmark ── */
+    .bench-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 32px;
+      font-size: 0.9rem;
+    }
+    .bench-table th {
+      text-align: left;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .bench-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .bench-table tr:last-child td { border-bottom: none; }
+    .bench-table td:first-child { color: var(--text); font-family: var(--mono); font-size: 0.85rem; }
+    .reduction { font-weight: 700; }
+    .reduction.high   { color: var(--green); }
+    .reduction.mid    { color: var(--yellow); }
+    .reduction.zero   { color: var(--muted); }
+    .bar-cell { min-width: 160px; }
+    .bar-bg {
+      height: 8px; border-radius: 4px;
+      background: var(--surface2);
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .bar-fill { height: 100%; border-radius: 4px; background: var(--green); }
+    .bench-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 32px;
+    }
+    @media (max-width: 700px) { .bench-summary { grid-template-columns: 1fr; } }
+    .bench-stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      text-align: center;
+    }
+    .bench-stat-num { font-size: 2.2rem; font-weight: 700; color: var(--green); }
+    .bench-stat-label { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+    .bench-stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; opacity: 0.7; }
+
+    /* ── PR automation ── */
+    .pr-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-top: 40px;
+      max-width: 720px;
+    }
+    .pr-step {
+      display: flex;
+      gap: 20px;
+      position: relative;
+      padding-bottom: 32px;
+    }
+    .pr-step:last-child { padding-bottom: 0; }
+    .pr-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .pr-dot {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      border: 2px solid;
+    }
+    .pr-dot.blue   { background: var(--accent-dim);  border-color: var(--accent);  color: var(--accent); }
+    .pr-dot.green  { background: var(--green-dim);   border-color: var(--green);   color: var(--green); }
+    .pr-dot.purple { background: var(--purple-dim);  border-color: var(--purple);  color: var(--purple); }
+    .pr-dot.yellow { background: var(--yellow-dim);  border-color: var(--yellow);  color: var(--yellow); }
+    .pr-connector {
+      width: 2px;
+      flex: 1;
+      background: var(--border);
+      margin: 4px 0;
+    }
+    .pr-step:last-child .pr-connector { display: none; }
+    .pr-content { padding-top: 6px; }
+    .pr-content h3 { margin-bottom: 4px; }
+    .pr-content p { font-size: 0.88rem; margin-bottom: 0; }
+
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--text);
+      margin-top: 16px;
+      overflow-x: auto;
+      line-height: 1.8;
+    }
+    .code-block .comment { color: var(--muted); }
+    .code-block .key { color: var(--purple); }
+    .code-block .val { color: var(--green); }
+    .code-block .cmd { color: var(--accent); }
+
+    /* ── Long-term value ── */
+    .value-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+    .value-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+    }
+    .value-icon { font-size: 1.6rem; margin-bottom: 12px; }
+    .value-card h3 { margin-bottom: 6px; color: var(--text); }
+    .value-card p { font-size: 0.88rem; }
+
+    /* ── Docs generated ── */
+    .doc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 32px;
+    }
+    .doc-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .doc-name {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .doc-desc { font-size: 0.8rem; color: var(--muted); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="inner">
+    <span class="nav-logo">svc<span>map</span></span>
+    <div class="nav-links">
+      <a href="#problem">The problem</a>
+      <a href="#users">Who benefits</a>
+      <a href="#benchmark">Benchmark</a>
+      <a href="#automation">PR automation</a>
+      <a href="#longterm">Long-term value</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
+<section id="hero">
+  <div class="container">
+    <div class="label">Open source · MIT</div>
+    <h1>Your codebase,<br><em>structured for AI</em></h1>
+    <p class="sub">
+      svcmap crawls your GitHub repos, extracts structured knowledge, and serves it
+      through an MCP server — so AI agents answer questions in 3K tokens instead of 50K.
+    </p>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">85%</div>
+        <div class="stat-label">token reduction<br>(paymentservice)</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">50%</div>
+        <div class="stat-label">avg token reduction<br>across 5 services</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">$62</div>
+        <div class="stat-label">saved per month<br>at 100 questions/day</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">12</div>
+        <div class="stat-label">structured docs<br>generated per service</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Problem ───────────────────────────────────────────────────────────────── -->
+<section id="problem">
+  <div class="container">
+    <div class="label">The problem</div>
+    <h2>AI agents struggle with raw codebases</h2>
+    <p>
+      Every time an agent answers a question about your services, it either reads raw source
+      (slow, expensive, incomplete) or guesses (inaccurate). Neither scales.
+    </p>
+    <div class="two-col">
+      <div class="card bad">
+        <div class="card-tag">Without svcmap</div>
+        <ul>
+          <li>Scans 50–200 files per question — most irrelevant</li>
+          <li>Consumes 10–50K tokens just to read context</li>
+          <li>Misses logic that spans multiple files</li>
+          <li>Makes GitHub API calls on every query — rate limited</li>
+          <li>Reconstructs dependency graphs from scratch every time</li>
+          <li>May expose raw secrets or credentials in context</li>
+          <li>No awareness of which services are stale or changed</li>
+          <li>15–30 second response time per question</li>
+        </ul>
+      </div>
+      <div class="card good">
+        <div class="card-tag">With svcmap</div>
+        <ul>
+          <li>Reads one focused Markdown doc — 2–4K tokens per question</li>
+          <li>Structured facts: endpoints, state machines, dependencies, runbooks</li>
+          <li>Cross-service dependency graph pre-built in PRODUCT.md</li>
+          <li>Local MCP server — no GitHub API calls at query time</li>
+          <li>Mermaid sequence diagrams for execution scenarios</li>
+          <li>Docs never include raw secrets — only descriptions</li>
+          <li>Staleness detection via HEAD SHA — agents know when to trust</li>
+          <li>Sub-second response from local knowledge base</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Pipeline ──────────────────────────────────────────────────────────────── -->
+<section id="pipeline">
+  <div class="container">
+    <div class="label">How it works</div>
+    <h2>One generation run, unlimited queries</h2>
+    <p>
+      svcmap runs once (or on each PR merge) and produces a living knowledge base
+      your entire team and all AI agents can query indefinitely.
+    </p>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-icon">🔍</div>
+        <div class="pipe-name">Crawl</div>
+        <div class="pipe-desc">Fetches all relevant files from GitHub. Priority-sorts routes → schemas → source → tests. Skips files &gt;300KB.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">⚙️</div>
+        <div class="pipe-name">Extract</div>
+        <div class="pipe-desc">12 sequential LLM passes extract typed structured data. Large repos use map-reduce chunking — never truncated.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">📄</div>
+        <div class="pipe-name">Generate</div>
+        <div class="pipe-desc">12 Markdown documents per service with Mermaid diagrams, tables, and cross-references. 20K token budget each.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🗺️</div>
+        <div class="pipe-name">Product level</div>
+        <div class="pipe-desc">PRODUCT.md (service map), DATAFLOW.md (event flows), INDEX.md (semantic router) generated across all services.</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🤖</div>
+        <div class="pipe-name">Serve</div>
+        <div class="pipe-desc">MCP server exposes tools: find_service, get_service_doc, search_index, get_dependencies. Works with Claude, Copilot, any MCP client.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Documents generated ───────────────────────────────────────────────────── -->
+<section id="docs">
+  <div class="container">
+    <div class="label">What gets generated</div>
+    <h2>12 documents per service, 3 product-level docs</h2>
+    <p>Each document is audience-aware — written for both human engineers and AI agents.</p>
+    <div class="doc-grid">
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">OVERVIEW.md</div>
+          <div class="doc-desc">Purpose, type, language, entry points, key abstractions</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">API.md</div>
+          <div class="doc-desc">Every endpoint with method, auth, request/response, status codes, events</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">SCENARIOS.md</div>
+          <div class="doc-desc">End-to-end flows with Mermaid sequence diagrams, function signatures, branch conditions, code snippets</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">BUSINESS_RULES.md</div>
+          <div class="doc-desc">State machines, permission matrix, calculation formulas, business constraints</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">DATA_MODEL.md</div>
+          <div class="doc-desc">DB entities, DTOs, validation rules, request/response objects</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">TABLE_MAP.md</div>
+          <div class="doc-desc">Which tables this service owns vs reads, per-feature usage</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">DEPENDENCIES.md</div>
+          <div class="doc-desc">Outbound calls, databases, third-party integrations with timeout/retry config</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">ARCHITECTURE.md</div>
+          <div class="doc-desc">Layer diagram, module dependency graph, circular dependency detection</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">CONFIG.md</div>
+          <div class="doc-desc">All env vars, feature flags, deployment notes</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">ERRORS.md</div>
+          <div class="doc-desc">Error catalogue with HTTP status, retryability, recovery hints</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">CODING_STANDARDS.md</div>
+          <div class="doc-desc">Architecture pattern, layer rules, naming conventions, anti-patterns</div>
+        </div>
+      </div>
+      <div class="doc-item">
+        <div>
+          <div class="doc-name">RUNBOOK.md</div>
+          <div class="doc-desc">Health checks, startup/shutdown, failure modes, rollback steps, escalation</div>
+        </div>
+      </div>
+      <div class="doc-item" style="border-color: var(--accent); background: var(--accent-dim)">
+        <div>
+          <div class="doc-name">PRODUCT.md</div>
+          <div class="doc-desc">Service map table + Mermaid dependency graph across all services</div>
+        </div>
+      </div>
+      <div class="doc-item" style="border-color: var(--accent); background: var(--accent-dim)">
+        <div>
+          <div class="doc-name">DATAFLOW.md</div>
+          <div class="doc-desc">Event flows, data ownership, external integrations across the product</div>
+        </div>
+      </div>
+      <div class="doc-item" style="border-color: var(--accent); background: var(--accent-dim)">
+        <div>
+          <div class="doc-name">INDEX.md</div>
+          <div class="doc-desc">Semantic router — agents start here to find the right service and document</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Who benefits ──────────────────────────────────────────────────────────── -->
+<section id="users">
+  <div class="container">
+    <div class="label">Who benefits</div>
+    <h2>Built for every role on an engineering team</h2>
+    <p>The same knowledge base serves humans and AI agents simultaneously.</p>
+    <div class="user-grid">
+
+      <div class="user-card">
+        <div class="user-card-header">
+          <div class="user-icon" style="background:#1a2a4a">👩‍💻</div>
+          <div>
+            <h3>Developers</h3>
+            <div class="user-role">Day-to-day engineering</div>
+          </div>
+        </div>
+        <ul>
+          <li>Find <span class="highlight">which endpoint to call</span> without reading 40 route files</li>
+          <li>Understand <span class="highlight">exactly what breaks</span> if you change a shared table</li>
+          <li>Know the <span class="highlight">retry/timeout config</span> before adding a new dependency</li>
+          <li>See <span class="highlight">where a bug is likely</span> from the error catalogue</li>
+          <li>Copy the <span class="highlight">exact function signature</span> from SCENARIOS.md</li>
+          <li>Understand <span class="highlight">coding conventions</span> before your first PR</li>
+        </ul>
+      </div>
+
+      <div class="user-card">
+        <div class="user-card-header">
+          <div class="user-icon" style="background:#1a3a22">🏗️</div>
+          <div>
+            <h3>Tech Leads & Architects</h3>
+            <div class="user-role">Design and ownership</div>
+          </div>
+        </div>
+        <ul>
+          <li><span class="highlight">Dependency graph</span> across all services — Mermaid diagram, always current</li>
+          <li>Spot <span class="highlight">circular dependencies</span> and tight coupling from ARCHITECTURE.md</li>
+          <li><span class="highlight">Impact analysis</span> before schema changes — TABLE_MAP shows who owns what</li>
+          <li>Review <span class="highlight">business rules</span> without reading the implementation</li>
+          <li>Enforce <span class="highlight">coding standards</span> via the generated doc, not tribal knowledge</li>
+          <li>Compare <span class="highlight">service patterns</span> across teams without repository access</li>
+        </ul>
+      </div>
+
+      <div class="user-card">
+        <div class="user-card-header">
+          <div class="user-icon" style="background:#2d1f4e">🤖</div>
+          <div>
+            <h3>AI Coding Assistants</h3>
+            <div class="user-role">Claude, Copilot, Cursor, any MCP client</div>
+          </div>
+        </div>
+        <ul>
+          <li>Query via <span class="highlight">MCP tools</span> — find_service, get_service_doc, get_dependencies</li>
+          <li><span class="highlight">3K tokens per question</span> instead of scanning 50K tokens of source</li>
+          <li>Structured facts to <span class="highlight">reduce hallucination</span> — no inferring from incomplete reads</li>
+          <li><span class="highlight">Sequence diagrams</span> for multi-service reasoning without raw code</li>
+          <li>State machine awareness — <span class="highlight">knows valid transitions</span> before suggesting code</li>
+          <li>Staleness flag — <span class="highlight">knows when to trust</span> cached answers vs re-querying</li>
+        </ul>
+      </div>
+
+      <div class="user-card">
+        <div class="user-card-header">
+          <div class="user-icon" style="background:#3a1a1a">🔥</div>
+          <div>
+            <h3>DevOps & SRE</h3>
+            <div class="user-role">Reliability and operations</div>
+          </div>
+        </div>
+        <ul>
+          <li><span class="highlight">RUNBOOK.md</span> — health checks, startup order, failure modes in one place</li>
+          <li>Know the <span class="highlight">rollback steps</span> without finding the original author at 3am</li>
+          <li><span class="highlight">ERRORS.md</span> — HTTP status codes, retryability, recovery hints per error type</li>
+          <li>Understand <span class="highlight">all env vars and feature flags</span> before a deployment</li>
+          <li>See <span class="highlight">which databases a service owns</span> before a migration</li>
+          <li><span class="highlight">Escalation paths</span> extracted from runbook signals in the source</li>
+        </ul>
+      </div>
+
+      <div class="user-card">
+        <div class="user-card-header">
+          <div class="user-icon" style="background:#2a1a3a">🧭</div>
+          <div>
+            <h3>New Team Members</h3>
+            <div class="user-role">Onboarding</div>
+          </div>
+        </div>
+        <ul>
+          <li>Understand the <span class="highlight">full product in one session</span> via INDEX.md and PRODUCT.md</li>
+          <li>Learn <span class="highlight">what each service does</span> without asking a senior engineer</li>
+          <li>Read <span class="highlight">business rules</span> in plain language before touching the code</li>
+          <li>See <span class="highlight">how services talk to each other</span> from DATAFLOW.md</li>
+          <li>Onboard to <span class="highlight">coding conventions</span> from day one via CODING_STANDARDS.md</li>
+          <li>Ask an AI assistant <span class="highlight">any question about the codebase</span> — it has the context</li>
+        </ul>
+      </div>
+
+      <div class="user-card">
+        <div class="user-card-header">
+          <div class="user-icon" style="background:#2a2a1a">📊</div>
+          <div>
+            <h3>Product Managers</h3>
+            <div class="user-role">Feature planning and communication</div>
+          </div>
+        </div>
+        <ul>
+          <li>Read <span class="highlight">business rules in plain language</span> — not raw code</li>
+          <li>Understand <span class="highlight">what a change will break</span> before committing to a deadline</li>
+          <li>See <span class="highlight">which teams own which data</span> for cross-team negotiations</li>
+          <li>Get <span class="highlight">feature-level scenarios</span> without a technical walkthrough</li>
+          <li>Track <span class="highlight">third-party integrations</span> and their cost implications</li>
+          <li>Use AI to <span class="highlight">answer "how does X work"</span> without engineering time</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Benchmark ─────────────────────────────────────────────────────────────── -->
+<section id="benchmark">
+  <div class="container">
+    <div class="label">Real benchmark</div>
+    <h2>GoogleCloudPlatform/microservices-demo</h2>
+    <p>
+      5 services across Go, C#, Python, and Node.js.
+      Source: <a href="https://github.com/GoogleCloudPlatform/microservices-demo" target="_blank">github.com/GoogleCloudPlatform/microservices-demo</a>
+    </p>
+
+    <table class="bench-table">
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Language</th>
+          <th>Files</th>
+          <th>Raw tokens/Q</th>
+          <th>Doc tokens/Q</th>
+          <th>Reduction</th>
+          <th class="bar-cell">Visual</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>paymentservice</td>
+          <td style="color:var(--muted)">Node.js</td>
+          <td style="color:var(--muted)">10</td>
+          <td style="color:var(--muted)">18.6K</td>
+          <td style="color:var(--muted)">2.7K</td>
+          <td><span class="reduction high">85%</span></td>
+          <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:85%"></div></div></td>
+        </tr>
+        <tr>
+          <td>checkoutservice</td>
+          <td style="color:var(--muted)">Go</td>
+          <td style="color:var(--muted)">8</td>
+          <td style="color:var(--muted)">12.3K</td>
+          <td style="color:var(--muted)">3.0K</td>
+          <td><span class="reduction high">76%</span></td>
+          <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:76%"></div></div></td>
+        </tr>
+        <tr>
+          <td>productcatalogservice</td>
+          <td style="color:var(--muted)">Go</td>
+          <td style="color:var(--muted)">10</td>
+          <td style="color:var(--muted)">12.0K</td>
+          <td style="color:var(--muted)">3.4K</td>
+          <td><span class="reduction high">72%</span></td>
+          <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:72%"></div></div></td>
+        </tr>
+        <tr>
+          <td>recommendationservice</td>
+          <td style="color:var(--muted)">Python</td>
+          <td style="color:var(--muted)">7</td>
+          <td style="color:var(--muted)">3.9K</td>
+          <td style="color:var(--muted)">3.2K</td>
+          <td><span class="reduction mid">17%</span></td>
+          <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:17%; background:var(--yellow)"></div></div></td>
+        </tr>
+        <tr>
+          <td>cartservice</td>
+          <td style="color:var(--muted)">C#</td>
+          <td style="color:var(--muted)">13</td>
+          <td style="color:var(--muted)">2.7K</td>
+          <td style="color:var(--muted)">2.7K</td>
+          <td><span class="reduction zero">0%</span></td>
+          <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:1%; background:var(--muted)"></div></div></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="bench-summary">
+      <div class="bench-stat">
+        <div class="bench-stat-num">50%</div>
+        <div class="bench-stat-label">average token reduction</div>
+        <div class="bench-stat-sub">9.9K → 3.0K per question</div>
+      </div>
+      <div class="bench-stat">
+        <div class="bench-stat-num">$62</div>
+        <div class="bench-stat-label">saved per month</div>
+        <div class="bench-stat-sub">at 100 questions/day · Claude Sonnet</div>
+      </div>
+      <div class="bench-stat">
+        <div class="bench-stat-num">59</div>
+        <div class="bench-stat-label">structured documents</div>
+        <div class="bench-stat-sub">generated from 48 source files</div>
+      </div>
+    </div>
+
+    <p style="margin-top:24px; font-size:0.85rem;">
+      <strong style="color:var(--text)">Note on cartservice (0%):</strong>
+      The source is compact C# — the structured doc ends up the same size as the 30% raw subset.
+      svcmap still adds value via the MCP interface, cross-service references, and structured access,
+      but the raw token reduction is negligible for small, tight services.
+    </p>
+  </div>
+</section>
+
+<!-- ── PR Automation ─────────────────────────────────────────────────────────── -->
+<section id="automation">
+  <div class="container">
+    <div class="label">PR-based automation</div>
+    <h2>Keep the knowledge base in sync automatically</h2>
+    <p>
+      Run svcmap on every PR merge so docs stay fresh without manual effort.
+      The knowledge base becomes a first-class CI artifact alongside your test reports.
+    </p>
+
+    <div class="two-col" style="margin-top:40px">
+      <div>
+        <div class="pr-flow">
+          <div class="pr-step">
+            <div class="pr-line">
+              <div class="pr-dot blue">1</div>
+              <div class="pr-connector"></div>
+            </div>
+            <div class="pr-content">
+              <h3>PR opened</h3>
+              <p>Developer opens a PR against a service. CI runs tests as normal.</p>
+            </div>
+          </div>
+          <div class="pr-step">
+            <div class="pr-line">
+              <div class="pr-dot blue">2</div>
+              <div class="pr-connector"></div>
+            </div>
+            <div class="pr-content">
+              <h3>PR merged to main</h3>
+              <p>GitHub Action triggers on push to main. Detects which services changed using path filters.</p>
+            </div>
+          </div>
+          <div class="pr-step">
+            <div class="pr-line">
+              <div class="pr-dot green">3</div>
+              <div class="pr-connector"></div>
+            </div>
+            <div class="pr-content">
+              <h3>svcmap regenerates affected services</h3>
+              <p>Only changed services are re-crawled and re-generated. Unchanged services use cached docs.</p>
+            </div>
+          </div>
+          <div class="pr-step">
+            <div class="pr-line">
+              <div class="pr-dot green">4</div>
+              <div class="pr-connector"></div>
+            </div>
+            <div class="pr-content">
+              <h3>Updated docs committed back</h3>
+              <p>The action commits the updated Markdown files. Diff is reviewable in the PR timeline.</p>
+            </div>
+          </div>
+          <div class="pr-step">
+            <div class="pr-line">
+              <div class="pr-dot purple">5</div>
+              <div class="pr-connector"></div>
+            </div>
+            <div class="pr-content">
+              <h3>MCP server picks up changes</h3>
+              <p>The running MCP server reads the updated docs on next query — no restart needed.</p>
+            </div>
+          </div>
+          <div class="pr-step">
+            <div class="pr-line">
+              <div class="pr-dot yellow">6</div>
+            </div>
+            <div class="pr-content">
+              <h3>Agents answer immediately</h3>
+              <p>Any AI assistant querying the MCP server gets the latest knowledge within minutes of the merge.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="code-block">
+<span class="comment"># .github/workflows/svcmap.yml</span>
+<span class="key">name:</span> <span class="val">Update knowledge base</span>
+<span class="key">on:</span>
+  <span class="key">push:</span>
+    <span class="key">branches:</span> <span class="val">[main]</span>
+
+<span class="key">jobs:</span>
+  <span class="key">svcmap:</span>
+    <span class="key">runs-on:</span> <span class="val">ubuntu-latest</span>
+    <span class="key">steps:</span>
+      - <span class="key">uses:</span> <span class="val">actions/checkout@v4</span>
+
+      - <span class="key">name:</span> <span class="val">Detect changed services</span>
+        <span class="key">id:</span> <span class="val">changes</span>
+        <span class="key">uses:</span> <span class="val">dorny/paths-filter@v3</span>
+        <span class="key">with:</span>
+          <span class="key">filters:</span> <span class="val">|
+            payment:
+              - 'src/paymentservice/**'
+            checkout:
+              - 'src/checkoutservice/**'</span>
+
+      - <span class="key">name:</span> <span class="val">Regenerate payment docs</span>
+        <span class="key">if:</span> <span class="val">steps.changes.outputs.payment == 'true'</span>
+        <span class="key">run:</span> <span class="val">|
+          node svcmap.js generate \
+            --service paymentservice</span>
+        <span class="key">env:</span>
+          <span class="key">ANTHROPIC_API_KEY:</span> <span class="val">${{ secrets.ANTHROPIC_API_KEY }}</span>
+          <span class="key">GITHUB_TOKEN:</span> <span class="val">${{ secrets.GITHUB_TOKEN }}</span>
+
+      - <span class="key">name:</span> <span class="val">Commit updated docs</span>
+        <span class="key">run:</span> <span class="val">|
+          git config user.name "svcmap-bot"
+          git add knowledge/
+          git diff --staged --quiet || \
+            git commit -m "docs: update knowledge base"
+          git push</span>
+        </div>
+        <p style="margin-top:16px; font-size:0.82rem;">
+          Use <code style="font-family:var(--mono); font-size:0.82rem; color:var(--accent)">svcmap status</code> in CI to check staleness without regenerating,
+          and <code style="font-family:var(--mono); font-size:0.82rem; color:var(--accent)">--save-extractions</code> to cache raw JSON for debugging failed extractions.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Long-term value ───────────────────────────────────────────────────────── -->
+<section id="longterm">
+  <div class="container">
+    <div class="label">Long-term value</div>
+    <h2>Compound returns over time</h2>
+    <p>
+      Unlike a wiki that goes stale or a chatbot that hallucinates, svcmap docs are
+      regenerated from source — they stay accurate and their value compounds with every query.
+    </p>
+    <div class="value-grid">
+      <div class="value-card">
+        <div class="value-icon">📈</div>
+        <h3>Compounding query savings</h3>
+        <p>Generation is a one-time cost. Every agent question answered from structured docs instead of raw source adds to the ROI. At 100 questions/day the payback is within days.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">🧠</div>
+        <h3>Organizational memory</h3>
+        <p>Business rules, state machines, and runbook knowledge captured in structured docs survive team turnover. The next engineer doesn't need to find the person who wrote it.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">🚀</div>
+        <h3>Faster onboarding</h3>
+        <p>New engineers understand the full product from INDEX.md and PRODUCT.md in one session. AI assistants can answer "how does the checkout flow work?" instantly with svcmap context.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">🔗</div>
+        <h3>Cross-team visibility</h3>
+        <p>Other teams query your service via the MCP server without requiring access to your repo or a synchronous meeting. Dependency graphs and API contracts are always discoverable.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">🛡️</div>
+        <h3>Safer changes</h3>
+        <p>TABLE_MAP.md and DEPENDENCIES.md make the blast radius of any change visible before it's made. Agents can answer "what breaks if I change this schema?" from structured data.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">📜</div>
+        <h3>Auditable history</h3>
+        <p>Docs committed to git create a timeline of how each service evolved. The diff between two doc versions tells you what changed about the API contract or business rules — not just the code.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">🔒</div>
+        <h3>Privacy by design</h3>
+        <p>Agents query a local MCP server, not GitHub directly. Raw source — including accidental secrets, API keys in comments, or PII in test fixtures — never reaches the LLM context window.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">⚡</div>
+        <h3>Sub-second agent responses</h3>
+        <p>Pre-generated docs answer in &lt;1 second from local disk. Without svcmap, agents spend 15–30 seconds crawling GitHub before they can answer, burning tokens and user patience.</p>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">🌐</div>
+        <h3>Multi-agent ready</h3>
+        <p>One knowledge base, one MCP server — serves Claude Desktop, VS Code Copilot, Cursor, and any other MCP-compatible agent simultaneously without redundant repo crawls.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <p>
+      <strong style="color:var(--text)">svcmap</strong> — open source, MIT license ·
+      <a href="https://github.com/abhinayreddy555/svcmap" target="_blank">GitHub</a>
+    </p>
+    <p style="margin-top:8px; font-size:0.8rem;">
+      Benchmark source: <a href="https://github.com/GoogleCloudPlatform/microservices-demo" target="_blank">GoogleCloudPlatform/microservices-demo</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
